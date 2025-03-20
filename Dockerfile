@@ -1,21 +1,33 @@
-# Stage 1: Build the Static Website
-FROM node:18 AS builder
-# Set working directory
+# ================================
+# Stage 1: Build
+# ================================
+FROM node:18 AS build
 WORKDIR /app
-# Copy package.json and package-lock.json (if using dependencies)
 COPY package*.json ./
-# Install dependencies (if any)
 RUN npm install
-# Copy the rest of the application code
 COPY . .
-# Build the static files (if using a framework like React, Vue, etc.)
 RUN npm run build
 
-# Stage 2: Serve the website with Apache
-FROM httpd:2.4
-# Copy built static files from builder stage
-COPY --from=builder /app/dist/ /usr/local/apache2/htdocs/
-# Expose port 80 for the Apache web server
+# ================================
+# Stage 2: Test
+# ================================
+FROM node:18 AS test
+WORKDIR /app
+COPY --from=build /app .
+RUN npm test
+
+# ================================
+# Stage 3: Sonar Check
+# ================================
+FROM sonarsource/sonar-scanner-cli AS sonar
+WORKDIR /app
+COPY --from=build /app .
+
+# ================================
+# Stage 4: Run
+# ================================
+FROM httpd:2.4 AS run
+WORKDIR /usr/local/apache2/htdocs/
+COPY --from=build /app/dist/ .
 EXPOSE 80
-# Start Apache server
 CMD ["httpd-foreground"]
