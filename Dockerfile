@@ -14,6 +14,7 @@ RUN npm run build
 FROM node:18 AS test
 WORKDIR /app
 COPY --from=build /app .
+RUN npm install --only=dev  # Ensure dev dependencies are installed
 RUN npm test
 
 # ================================
